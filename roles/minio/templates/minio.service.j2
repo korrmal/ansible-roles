@@ -10,7 +10,7 @@ EnvironmentFile=/etc/minio/minio.env
 Restart=always
 LimitNOFILE=65536
 TimeoutStopSec=0
-ExecStart={{ minio_bin_path }} server {% for host in groups['minio_nodes'] %}http://{{ hostvars[host]['ansible_host'] }}/var/minio/data {% endfor %}
+ExecStart={{ minio_bin_path }} server $MINIO_OPTS {% for host in groups['minio_nodes'] %}http://{{ hostvars[host]['ansible_host'] }}/var/minio/data {% endfor %}
 
 [Install]
 WantedBy=multi-user.target
