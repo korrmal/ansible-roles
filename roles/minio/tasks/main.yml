@@ -81,12 +81,12 @@
     state: started
     enabled: yes
 
-#- name: Wait until Minio start on all nodes
-#  wait_for:
-#    host: "{{ item }}"
-#    port: "{{ minio_server_port }}"
-#    timeout: 30
-#  loop: "{{ minio_cluster_nodes }}"
+- name: Wait until Minio start on all nodes
+  wait_for:
+    host: "{{ item }}"
+    port: "{{ minio_server_port }}"
+    timeout: 30
+  loop: "{{ minio_cluster_nodes }}"
 
 - name: Configure Minio alias
   command: >
