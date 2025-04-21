@@ -1,0 +1,13 @@
+---
+minio_server_port: 9000
+minio_console_port: 9001
+minio_root_user: minioadmin
+minio_root_pwd: minioadmin123
+minio_dirs:
+  - /etc/minio
+  - /var/minio/data
+minio_bin_url: https://dl.min.io/server/minio/release/linux-amd64/minio
+minio_mc_url: https://dl.min.io/client/mc/release/linux-amd64/mc
+minio_bin_path: /usr/local/bin/minio
+minio_mc_path: /usr/local/bin/mc
+minio_cluster_nodes: "{{ groups['minio_nodes'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | list }}"

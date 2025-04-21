@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+  listen: Reload systemd
+
+- name: Restart Minio
+  systemd:
+    name: minio
+    state: restarted
+  listen: Restart Minio

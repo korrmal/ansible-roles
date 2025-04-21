@@ -1,0 +1,115 @@
+---
+#Check minio requorements
+- name: check Minio installed
+  stat:
+    path: "{{ minio_bin_path }}"
+  register: minio_installed
+
+- name: Check if MinIO Client (mc) is installed
+  stat:
+    path: "{{ minio_mc_path }}"
+  register: mc_installed
+
+- name: Check if Minio directories exist
+  stat:
+    path: "{{ item }}"
+  loop: "{{ minio_dirs }}"
+  register: minio_dirs
+
+#Create user, group, dirs for minio
+- name: Create MinIO group
+  group:
+    name: minio
+    system: yes
+    state: present
+
+- name: Create MinIO user
+  user:
+    name: minio
+    system: yes
+    create_home: no
+    shell: /sbin/nologin
+    group: minio
+    state: present
+
+- name: Create MinIO directories
+  file:
+    path: "{{ item.item }}"
+    state: directory
+    owner: minio
+    group: minio
+    mode: '0755'
+  loop: "{{ minio_dirs.results }}"
+  when: not item.stat.exists
+
+#Install minio
+- name: Download Minio binary
+  get_url:
+    url: "{{ minio_bin_url }}"
+    dest: "{{ minio_bin_path }}"
+    mode: '0755'
+  when: not minio_installed.stat.exists
+
+- name: Download Minio Client (mc)
+  get_url:
+    url: "{{ minio_mc_url }}"
+    dest: "{{ minio_mc_path }}"
+    mode: '0755'
+  when: not mc_installed.stat.exists
+
+- name: Copy Minio config
+  template:
+    src: minio.env.j2
+    dest: /etc/minio/minio.env
+    owner: minio
+    group: minio
+    mode: '0600'
+  notify: Restart Minio
+
+- name: Copy systemd service
+  template:
+    src: minio.service.j2
+    dest: /etc/systemd/system/minio.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Check is Minio start
+  systemd:
+    name: minio
+    state: started
+    enabled: yes
+
+#- name: Wait until Minio start on all nodes
+#  wait_for:
+#    host: "{{ item }}"
+#    port: "{{ minio_server_port }}"
+#    timeout: 30
+#  loop: "{{ minio_cluster_nodes }}"
+
+- name: Configure Minio alias
+  command: >
+    {{ minio_mc_path }} alias set local http://{{ minio_cluster_nodes[0] }}:{{ minio_server_port }}
+    {{ minio_root_user }} {{ minio_root_pwd }}
+  delegate_to: "{{ groups['minio_nodes'][0] }}"
+  run_once: true
+
+- name: Check if Minio is init
+  command: >
+    {{ minio_mc_path }} admin info local
+  delegate_to: "{{ groups['minio_nodes'][0] }}"
+  register: minio_cluster_status
+  failed_when: false
+  run_once: true
+
+- name: Init Minio cluster
+  command: >
+    {{ minio_mc_path }} admin cluster init local
+    {% for node in minio_cluster_nodes %}
+    http://{{ node }}:{{ minio_server_port }}/var/minio dzisiaj
+    {% endfor %}
+  delegate_to: "{{ groups['minio_nodes'][0] }}"
+  when: minio_cluster_status.rc != 0
+  run_once: true
+  notify: Restart Minio
