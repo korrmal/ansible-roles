@@ -1,0 +1,35 @@
+
+cluster.name: {{ cluster_name }}
+node.name: {{ inventory_hostname }}
+
+{% if elasticsearch_cluster == true %}
+{% if 'elasticsearch_master' in group_names and 'elasticsearch_data' not in group_names %}
+node.master: true
+node.data: false
+{% elif  'elasticsearch_master' in group_names and 'elasticsearch_data' in group_names%}
+node.master: true
+node.data: true
+{% elif  'elasticsearch_master' not in group_names and 'elasticsearch_data' in group_names%}
+node.master: false
+node.data: true
+{% endif %}
+{% endif %}
+
+path.data: /data/elasticsearch
+path.logs: /data/log/elasticsearch
+bootstrap.memory_lock: true
+network.host: {{ ansible_host }}
+network.publish_host: {{ ansible_host }}
+http.port: {{ http_port }}
+path.data: /data/elasticsearch
+path.logs: /data/log/elasticsearch
+{% if elasticsearch_cluster == false %}
+discovery.seed_hosts: ["{{ ansible_host }}"]
+{% endif %}
+{% if elasticsearch_cluster == true %}
+discovery.zen.ping.unicast.hosts: [{%for host in groups['elasticsearch_all']%}"{{hostvars[host].ansible_host}}"{% if not loop.last %}, {% endif %}{% endfor %}]
+discovery.zen.minimum_master_nodes: 2
+cluster.initial_master_nodes: [{%for host in groups['elasticsearch_master']%}"{{hostvars[host].ansible_host}}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% else %}
+cluster.initial_master_nodes: ["{{ ansible_host }}"]
+{% endif %}

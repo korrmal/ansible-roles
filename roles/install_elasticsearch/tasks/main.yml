@@ -1,0 +1,25 @@
+---
+
+- name: Install required system packages
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: [ 'elasticsearch',
+           'logstash',
+           'kibana'
+          ]
+
+- name: configure elasticsearch
+  template:
+    src: elasticsearch.yml.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+
+- name: configure java
+  template:
+    src: jvm.options.j2
+    dest: /etc/elasticsearch/jvm.options
+
+- name: add sysctl.conf
+  sysctl:
+    name: vm.max_map_count
+    value: 262144
+    state: present
+  notify: restart elasticsearch
